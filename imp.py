@@ -13,6 +13,8 @@ from arg_loader import *
 
 print master_file
 
+output = open("output.txt",'w')
+
 def sign_finder(num):
 	return num/abs(num)
 	
@@ -103,11 +105,11 @@ for filename in sys.argv[9:]:
 		distance_coord_temp.append(distance_intersect)
 	mass_coord.append(float(mass))
 	distance_coord.append(distance_coord_temp)
+	for i in range(len(distance_along_master)):
+		output.write(str(distance_along_master[i])+'\t'+str(distance_coord_temp[i])+'\n')
 
 #Make output plot
 fig = plt.figure()
-print mass_coord
-print distance_coord
 
 #PARAMETERIZE AS DISTANCE ALONG LIMIT CONTOUR
 for i in range(len(mass_coord)):

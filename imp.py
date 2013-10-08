@@ -19,7 +19,7 @@ def sign_finder(num):
 	return num/abs(num)
 	
 #Analysis for master line
-path_temp=processing(master_file,x_u,y_u,x_l,y_l,3000,x_new_res,y_new_res,coord_opt)
+path_temp=processing(master_file,x_u,y_u,x_l,y_l,30000,x_new_res,y_new_res,coord_opt)
 if isinstance(path_temp,np.ndarray)==False:
 	if path_temp == -1:
 		print "Master file not found. Program exiting..."
@@ -53,7 +53,7 @@ distance_coord=[]
 
 #Analysis of data files provided
 for filename in sys.argv[9:]:
-	data_temp=processing(filename,x_u,y_u,x_l,y_l,3000,x_new_res,y_new_res,coord_opt)
+	data_temp=processing(filename,x_u,y_u,x_l,y_l,30000,x_new_res,y_new_res,coord_opt)
 	if isinstance(data_temp,np.ndarray)==False:
 		if data_temp == -1:
 			print "Data file "+filename+" not found. Skipping..."

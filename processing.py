@@ -57,7 +57,7 @@ def processing(filename,x_u,y_u,x_l,y_l,s_val,x_new_res,y_new_res,coord_opt):
 	#plot only the cls_level line
 	v=np.linspace(95,95,2)
 	cs = plt.contour(xnew,ynew,values_new,v)
-
+	
 	#Extract data of cls_level line
 	#TODO: investigate syntax of this line
 	#TODO: catch error where there is data below 95% but not enough to generate a contour

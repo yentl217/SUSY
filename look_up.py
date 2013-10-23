@@ -4,6 +4,8 @@ import numpy as np
 import sys
 import math
 import scipy.interpolate as interp
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from processing import *
 #Load in arguments
@@ -36,12 +38,18 @@ def m12_cls(m12):
 def mg_cls(mg):
 	return (1.826E-10*mg**3-6.511E-7*mg**2+6.2152E-4*mg+0.83034)
 
+#Which contour to draw (in percentage)
+contour_lim = sys.argv[9]
+print "Limit contour calculated is "+contour_lim
+#Which input file contains the group of masses we are interested in
+input_file = sys.argv[10]
+print "Input file used is "+input_file
 
 #load in masses
-input_masses = np.loadtxt("input",delimiter=',')
+input_masses = np.loadtxt(input_file,delimiter=',')
 
 #Generate m3 master line
-path_temp=processing(master_file,x_u,y_u,x_l,y_l,3000,x_new_res,y_new_res,coord_opt)
+path_temp=processing(master_file,x_u,y_u,x_l,y_l,3000,x_new_res,y_new_res,coord_opt,int(contour_lim))
 if isinstance(path_temp,np.ndarray)==False:
 	if path_temp == -1:
 		print "Master file not found. Program exiting..."

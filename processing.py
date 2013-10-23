@@ -4,9 +4,11 @@
 
 import numpy as np
 import scipy.interpolate as interp
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-def processing(filename,x_u,y_u,x_l,y_l,s_val,x_new_res,y_new_res,coord_opt):
+def processing(filename,x_u,y_u,x_l,y_l,s_val,x_new_res,y_new_res,coord_opt,contour_lim):
 	#load in data as a 2D matrix
 	try:
    		with open(filename): pass
@@ -18,7 +20,7 @@ def processing(filename,x_u,y_u,x_l,y_l,s_val,x_new_res,y_new_res,coord_opt):
 	flag = False
 	for row in values:
 		for element in row:
-			if element >= 95:
+			if element >= contour_lim:
 				flag = True
 				break
 	if (flag == False):
@@ -54,7 +56,7 @@ def processing(filename,x_u,y_u,x_l,y_l,s_val,x_new_res,y_new_res,coord_opt):
 	values_new = interp.bisplev(xnew[:,0],ynew[0,:],tck)
 
 	#plot only the cls_level line
-	v=np.linspace(95,95,2)
+	v=np.linspace(contour_lim,contour_lim,2)
 	cs = plt.contour(xnew,ynew,values_new,v)
 	
 	#Extract data of cls_level line

@@ -9,6 +9,8 @@ from processing import *
 #Load in arguments
 from arg_loader import *
 
+#define functions used in rest of program
+
 #dot product function
 def dot_product(coord_a,coord_b):
 	if len(coord_a) != len(coord_b):
@@ -18,12 +20,6 @@ def dot_product(coord_a,coord_b):
 	for i in range(len(coord_a)):
 		dot_product+=coord_a[i]*coord_b[i]
 	return dot_product
-
-#load in masses
-
-mg = float(sys.argv[9])
-m12 = float(sys.argv[10])
-m3  = float(sys. argv[11])
 
 #Contour generation functions
 def profile(distance_along_lim_contour): 
@@ -40,6 +36,10 @@ def m12_cls(m12):
 def mg_cls(mg):
 	return (1.826E-10*mg**3-6.511E-7*mg**2+6.2152E-4*mg+0.83034)
 
+
+#load in masses
+input_masses = np.loadtxt("input",delimiter=',')
+
 #Generate m3 master line
 path_temp=processing(master_file,x_u,y_u,x_l,y_l,3000,x_new_res,y_new_res,coord_opt)
 if isinstance(path_temp,np.ndarray)==False:
@@ -54,60 +54,88 @@ if isinstance(path_temp,np.ndarray)==False:
 		sys.exit()
 else:
 	path_master = path_temp
-
-#Generate m3 line
+	
 path_master_tck=interp.splrep(path_master[:,0],path_master[:,1],k=2,s=0)#no smoothing is needed as points are already extremely close
 path_master_deriv=interp.splev(path_master[:,0],path_master_tck,der=1)
 
-#distance from topmost point on master #TODO: Make this more general
+#distance from topmost point on master 
+#TODO: Make this more general
 distance_along_master=[0]
 for i in range(1,len(path_master)):
 	distance_along_master.append(distance_along_master[i-1]+np.sqrt((path_master[i][0]-path_master[i-1][0])**2+(path_master[i][1]-path_master[i-1][1])**2))
-
 distance_profile = profile(distance_along_master)
-overall_shift = mass_change(m3)
-new_contour_dist = [ x+overall_shift for x in distance_profile ] 
 
-new_contour=[]
+#Dictionary for m3 masses and contours
+m3_dict = {}
 
-for i in range(len(path_master)):
+#Generate m3 lines
+for m3_mass in input_masses[:,2]:
+	#if contour for m3_mass already drawn, do not draw it again
+	if m3_mass in m3_dict:
+		continue
+	overall_shift = mass_change(m3_mass)
+	new_contour_dist = [ x+overall_shift for x in distance_profile ] 
+	new_contour=[]
+	for i in range(len(path_master)):
 		y=new_contour_dist[i]*math.sin(math.atan(-1.0/path_master_deriv[i]))
 		x=new_contour_dist[i]*math.cos(math.atan(-1.0/path_master_deriv[i]))
 		new_contour.append([path_master[i][0]+x, path_master[i][1]+y])
-
-new_contour_tck=interp.splrep([x[0] for x in new_contour],[x[1] for x in new_contour],k=2,s=0)#no smoothing is needed as points are already extremely close
-new_contour_deriv=interp.splev([x[0] for x in new_contour],new_contour_tck,der=1)
-		
-#Calculate CLS
+	m3_dict[m3_mass]=new_contour
 
 #Find point on m3 curve at which the normal to (m12,mg) is drawn
-join_vec = [m12-new_contour[0][0],m3-new_contour[0][1]]
-tangent_vec = [1,1*new_contour_deriv[0]]
-cos = dot_product(join_vec,tangent_vec)/(np.sqrt(dot_product(join_vec,join_vec))*np.sqrt(dot_product(tangent_vec,tangent_vec)))
-sign = cos/abs(cos)
-for i in range(len(path_master)):
-	join_vec = [m12-new_contour[i][0],mg-new_contour[i][1]]
-	tangent_vec = [1,1*new_contour_deriv[i]]
+for masses in input_masses:
+	#Load in values for m12 and mg, and look up the contour for m3
+	m12 = masses[1]
+	mg = masses[0]
+	m3_contour = m3_dict[masses[2]]
+	
+	#Calculate tck values and first derivative for m3 contour
+	m3_contour_tck=interp.splrep([x[0] for x in m3_contour],[x[1] for x in m3_contour],k=2,s=0)#no smoothing is needed as points are already extremely close
+	m3_contour_deriv=interp.splev([x[0] for x in m3_contour],m3_contour_tck,der=1)
+	
+	#Calculate vector joining (m12,mg) to first point on m3 contour
+	join_vec = [m12-m3_contour[0][0],mg-m3_contour[0][1]]
+	#Calcuate vector of tangent at first point on m3 contour
+	tangent_vec = [1,1*m3_contour_deriv[0]]
+	#Calculate cosine of angle between vector joining (m12,mg) to first point on m3 contour to the vector of the tangent there
 	cos = dot_product(join_vec,tangent_vec)/(np.sqrt(dot_product(join_vec,join_vec))*np.sqrt(dot_product(tangent_vec,tangent_vec)))
-	sign_temp = cos/abs(cos)
-	if sign_temp != sign:
-		break
-	sign = sign_temp
-if i == len(new_contour)-1 and sign == sign_temp:
-	print "No CLS calculated because the program was not able to draw a normal from the m3 curve to the point"
-else:
-	x = (new_contour[i][0]+new_contour[i-1][0])/2
-	y = (new_contour[i][1]+new_contour[i-1][1])/2
+	#Initialise the sign of the cosine
+	sign = cos/abs(cos)
+	
+	#Repeat above for all points on the m3 contour, until a sign change in the cosine is found
+	#This indicates a point where the cosine = 0 i.e. where the vector between (m12,mg) and a point on the m3 contour and the tangent there are 
+	#perpendicular. At this point the normal connecting the contour to (m12,mg) has been found.
+	#The average of the points about the sign change is taken as an estimate of where the cosine=0 point is.
+	for i in range(1,len(m3_contour)):
+		join_vec = [m12-m3_contour[i][0],mg-m3_contour[i][1]]
+		tangent_vec = [1,1*m3_contour_deriv[i]]
+		cos = dot_product(join_vec,tangent_vec)/(np.sqrt(dot_product(join_vec,join_vec))*np.sqrt(dot_product(tangent_vec,tangent_vec)))
+		sign_temp = cos/abs(cos)
+		if sign_temp != sign:
+			break
+		sign = sign_temp
+	if i == len(m3_contour)-1 and sign == sign_temp:
+		print "No CLS calculated because the program was not able to draw a normal from the m3 curve to the point"
+	else:
+		x = (m3_contour[i][0]+m3_contour[i-1][0])/2
+		y = (m3_contour[i][1]+m3_contour[i-1][1])/2
+	print x
+	print y
+	
+	cls_x = m12_cls(m12)/m12_cls(x)
+	cls_y = mg_cls(mg)/mg_cls(y)
+	CLS = cls_x*cls_y
+	if CLS*100 > 100:
+		CLS = 100.0
+	print CLS
 
-print x
-print y
-
-cls_x = m12_cls(m12)/m12_cls(x)
-cls_y = mg_cls(mg)/mg_cls(y)
-CLS = cls_x*cls_y
-if CLS*95 > 100:
-	CLS = 100.0/95.0
-
-print CLS
-plt.plot([x[0] for x in new_contour],[x[1] for x in new_contour])
-plt.show()
+#Sanity check plots
+	#gradient = (mg-y)/(m12-x)
+	#X = np.mgrid[x_l:x_u:x_new_res*1j]
+	#Y= [ element*gradient+(mg-gradient*m12) for element in X ] 
+	#plt.ylim(y_l,y_u)
+	#plt.xlim(x_l,x_u)
+	#plt.plot(X,Y)
+	#plt.plot(m12,mg,'ro')
+	#plt.plot([x[0] for x in m3_contour], [x[1] for x in m3_contour])
+	#plt.show()

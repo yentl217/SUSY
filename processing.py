@@ -15,14 +15,13 @@ def processing(filename,x_u,y_u,x_l,y_l,s_val,x_new_res,y_new_res,coord_opt):
 	values = np.loadtxt(filename,delimiter=',')
 
 	#Check if 95% limit will exist
-	int_box=[0]
+	flag = False
 	for row in values:
 		for element in row:
-			if element <= 95:
+			if element >= 95:
+				flag = True
 				break
-			else:
-				int_box[0]=int_box[0]+1
-	if (len(values)*len(values[0]) == int_box[0]):
+	if (flag == False):
 		return -2
 	
 	#define data co-ordinates
